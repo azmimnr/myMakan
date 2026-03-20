@@ -27,6 +27,11 @@ mkdir -p /app/storage/app/public /app/storage/app/public/media
 chown -R application:application /app/storage/app/public
 chmod -R 775 /app/storage/app/public
 
+# Ensure language files are writable for runtime language CRUD operations.
+mkdir -p /app/lang /app/resources/js/languages
+chown -R application:application /app/lang /app/resources/js/languages
+chmod -R 775 /app/lang /app/resources/js/languages
+
 # ---------------------------------------------------------------------------
 # 2. Write .env using PHP (handles special characters in passwords safely)
 # ---------------------------------------------------------------------------
