@@ -22,6 +22,11 @@ chown -R application:application /app/storage /app/bootstrap/cache
 chmod -R 775 /app/storage /app/bootstrap/cache
 echo "[startup] Storage directories OK."
 
+# Ensure media-library directories exist and are writable.
+mkdir -p /app/storage/app/public /app/storage/app/public/media
+chown -R application:application /app/storage/app/public
+chmod -R 775 /app/storage/app/public
+
 # ---------------------------------------------------------------------------
 # 2. Write .env using PHP (handles special characters in passwords safely)
 # ---------------------------------------------------------------------------
@@ -39,3 +44,12 @@ rm -f /app/bootstrap/cache/config.php \
       /app/bootstrap/cache/packages.php
 
 echo "[startup] Init complete."
+
+# Ensure public storage symlink exists after each container start.
+# In containerized deployments, this symlink can be lost across rebuild/redeploy.
+if [ ! -L /app/public/storage ]; then
+    rm -rf /app/public/storage
+    ln -s /app/storage/app/public /app/public/storage
+fi
+
+echo "[startup] Storage link OK."
