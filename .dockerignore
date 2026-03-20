@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.production.example
+node_modules
+npm-debug.log
+yarn-error.log
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+public/file/service-account-file.json
+.vscode
+.idea

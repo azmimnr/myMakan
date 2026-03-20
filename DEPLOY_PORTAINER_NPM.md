@@ -1,53 +1,64 @@
-# External Deployment: Portainer + Nginx Proxy Manager
+# External Deployment: Portainer + Nginx Proxy Manager (Image-Based)
 
-This deployment keeps the application code on the Docker host and uses Portainer to run the stack.
+This deployment pulls your app image from GHCR and does not require `git clone` on the host.
 
-## 1. Host preparation
+## 1. Build and publish the app image
 
-On the Docker host, place the project at:
+The repository includes a GitHub Actions workflow that builds and pushes:
 
-`/opt/mymakan`
+- `ghcr.io/azmimnr/mymakan:latest`
+- `ghcr.io/azmimnr/mymakan:<commit-sha>`
 
-Required files on the host path:
+Workflow file:
 
-- application source code
-- `docker-compose.portainer.yml`
-- `.env`
+- `.github/workflows/build-image.yml`
 
-Copy the production environment template:
+Push to `main` once and wait for Actions to complete successfully.
 
-- copy `.env.production.example` to `.env`
-- review SMTP values
-- confirm `APP_URL=https://mymakan.mydigitalservice.net`
-- keep `DB_HOST=db`
+## 2. Host preparation
 
-## 2. Create Docker network for Nginx Proxy Manager
-
-Create a shared external network once on the Docker host:
+Create the shared Nginx Proxy Manager network once:
 
 ```bash
 docker network create proxy
 ```
 
-Your Nginx Proxy Manager stack must also be attached to the same `proxy` network.
+Make sure your Nginx Proxy Manager stack is attached to this same `proxy` network.
 
-## 3. Deploy in Portainer
+## 3. Deploy stack in Portainer
 
-Use the stack file:
+Create a stack using:
 
 - `docker-compose.portainer.yml`
 
-Set the stack environment variable in Portainer:
+In Portainer stack environment variables, add values from `.env.production.example`.
 
-```text
-APP_PATH=/opt/mymakan
-```
+Minimum required values:
 
-Deploy the stack.
+- `MYMAKAN_IMAGE=ghcr.io/azmimnr/mymakan:latest`
+- `APP_NAME`
+- `APP_ENV`
+- `APP_DEBUG`
+- `APP_URL`
+- `APP_KEY`
+- `DB_DATABASE`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_ROOT_PASSWORD`
+- `MAIL_HOST`
+- `MAIL_PORT`
+- `MAIL_USERNAME`
+- `MAIL_PASSWORD`
+- `MAIL_ENCRYPTION`
+- `MAIL_FROM_ADDRESS`
+- `MAIL_FROM_NAME`
+- `VITE_API_KEY`
+
+Then deploy the stack.
 
 ## 4. One-time app initialization
 
-After the stack is running, open the app container console in Portainer and run:
+After containers are running, open app container console and run:
 
 ```bash
 chown -R application:application /app/storage /app/bootstrap/cache
@@ -56,7 +67,7 @@ php artisan storage:link
 php artisan optimize:clear
 ```
 
-## 5. Fresh install or existing data
+## 5. Data initialization options
 
 ### Option A: Fresh production install
 
@@ -64,50 +75,48 @@ Open:
 
 - `https://mymakan.mydigitalservice.net/install`
 
-Then complete the installer using:
+Use:
 
-- database host: `db`
-- database port: `3306`
-- database name: `mymakan`
-- database username: `mymakan_user`
-- database password: `dbpassword$$%%`
+- host: `db`
+- port: `3306`
+- database: value of `DB_DATABASE`
+- username: value of `DB_USERNAME`
+- password: value of `DB_PASSWORD`
 
-### Option B: Move the tested local database
+### Option B: Use tested local database
 
-Export from local:
+Export local DB:
 
 ```bash
 docker compose -f docker-compose.local.yml exec -T db mysqldump -umymakan_user -p'dbpassword$$%%' mymakan > mymakan.sql
 ```
 
-Import on the host into the `db` container:
+Import to production DB container:
 
 ```bash
-docker exec -i mymakan_db mysql -umymakan_user -p'dbpassword$$%%' mymakan < mymakan.sql
+docker exec -i mymakan_db mysql -u<DB_USERNAME> -p'<DB_PASSWORD>' <DB_DATABASE> < mymakan.sql
 ```
 
-If you import the local database, do not run the installer again.
+If importing existing data, do not run installer again.
 
 ## 6. Nginx Proxy Manager setup
 
-Create a new Proxy Host in Nginx Proxy Manager:
+Create Proxy Host:
 
-- Domain Names: `mymakan.mydigitalservice.net`
+- Domain: `mymakan.mydigitalservice.net`
 - Scheme: `http`
-- Forward Hostname / IP: `mymakan_app`
+- Forward Hostname/IP: `mymakan_app`
 - Forward Port: `80`
-- Websockets Support: enabled
+- Websockets: enabled
 - Block Common Exploits: enabled
-- Cache Assets: optional
 
 SSL tab:
 
-- Request a new Let's Encrypt certificate
+- Request Let's Encrypt certificate
 - Force SSL: enabled
-- HTTP/2 Support: enabled
-- HSTS: enabled if you want strict HTTPS
+- HTTP/2: enabled
 
-Advanced tab recommended snippet:
+Advanced snippet:
 
 ```nginx
 client_max_body_size 64m;
@@ -116,27 +125,15 @@ proxy_send_timeout 300s;
 proxy_connect_timeout 60s;
 ```
 
-## 7. Post-deploy checks
+## 7. Upgrade process
 
-Verify these after the first successful load:
+1. Push code changes to `main`.
+2. Wait for GitHub Actions image build/push.
+3. In Portainer, redeploy stack.
+4. Run `php artisan optimize:clear` in app container.
 
-- login works
-- dashboard loads
-- media upload works
-- `public/storage` files are served correctly
-- SMTP test mail works
-- background features that depend on app settings work as expected
+## 8. Notes
 
-## 8. Upgrades
-
-For future upgrades:
-
-1. back up the database volume first
-2. back up `/opt/mymakan/storage`
-3. update project files in `/opt/mymakan`
-4. redeploy the Portainer stack
-5. run `php artisan optimize:clear`
-
-## 9. Important note
-
-This stack intentionally does not publish the app port to the public internet. External access should go only through Nginx Proxy Manager on the shared `proxy` network.
+- App container is not publicly exposed by port.
+- Public traffic should pass only through Nginx Proxy Manager over `proxy` network.
+- Uploaded files and runtime data persist in Docker volume `mymakan_storage`.

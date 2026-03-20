@@ -1,19 +1,53 @@
 services:
   app:
-    image: webdevops/php-nginx:8.2
+    image: ${MYMAKAN_IMAGE:-ghcr.io/azmimnr/mymakan:latest}
     container_name: mymakan_app
     restart: unless-stopped
     working_dir: /app
     volumes:
-      - ${APP_PATH:-/opt/mymakan}:/app
-    env_file:
-      - ${APP_PATH:-/opt/mymakan}/.env
+      - mymakan_storage:/app/storage
     environment:
       WEB_DOCUMENT_ROOT: /app/public
       PHP_DISPLAY_ERRORS: 0
       PHP_MEMORY_LIMIT: 512M
       PHP_POST_MAX_SIZE: 64M
       PHP_UPLOAD_MAX_FILESIZE: 64M
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL}
+      APP_KEY: ${APP_KEY}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-warning}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CACHE_DRIVER: ${CACHE_DRIVER:-file}
+      CACHE_STORE: ${CACHE_STORE:-file}
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
+      TIMEZONE: ${TIMEZONE:-UTC}
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+      MAIL_EHLO_DOMAIN: ${MAIL_EHLO_DOMAIN}
+      DEMO: ${DEMO:-false}
+      MIX_API_KEY: ${MIX_API_KEY}
+      VITE_API_KEY: ${VITE_API_KEY}
+      CURRENCY: ${CURRENCY:-USD}
+      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-$}
+      CURRENCY_POSITION: ${CURRENCY_POSITION:-5}
+      CURRENCY_DECIMAL_POINT: ${CURRENCY_DECIMAL_POINT:-2}
+      DATE_FORMAT: ${DATE_FORMAT:-d-m-Y}
+      TIME_FORMAT: ${TIME_FORMAT:-h:i A}
     depends_on:
       - db
     networks:
@@ -25,8 +59,11 @@ services:
     container_name: mymakan_db
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
-    env_file:
-      - ${APP_PATH:-/opt/mymakan}/.env
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - mymakan_db_data:/var/lib/mysql
     networks:
@@ -34,6 +71,7 @@ services:
 
 volumes:
   mymakan_db_data:
+  mymakan_storage:
 
 networks:
   proxy:
