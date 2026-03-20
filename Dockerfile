@@ -21,9 +21,10 @@ WORKDIR /app
 COPY . /app
 COPY --from=vendor_builder /app/vendor /app/vendor
 
-# Keep runtime directories writable for php-fpm user in container.
-RUN chown -R application:application /app/storage /app/bootstrap/cache \
-    && chmod -R 775 /app/storage /app/bootstrap/cache
+# Install startup init script (runs via webdevops entrypoint.d on every container start).
+# It creates storage directory structure, writes .env from env vars, and clears stale cache.
+COPY docker/startup.sh /opt/docker/provision/entrypoint.d/10-app-init.sh
+RUN chmod +x /opt/docker/provision/entrypoint.d/10-app-init.sh
 
 ENV WEB_DOCUMENT_ROOT=/app/public
 ENV PHP_DISPLAY_ERRORS=0
