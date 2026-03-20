@@ -1,8 +1,24 @@
+FROM composer:2 AS vendor_builder
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies without running app scripts during build.
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader
+
 FROM webdevops/php-nginx:8.2
 
 WORKDIR /app
 
 COPY . /app
+COPY --from=vendor_builder /app/vendor /app/vendor
 
 # Keep runtime directories writable for php-fpm user in container.
 RUN chown -R application:application /app/storage /app/bootstrap/cache \
