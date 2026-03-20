@@ -11,7 +11,8 @@ RUN composer install \
     --no-interaction \
     --no-progress \
     --no-scripts \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --ignore-platform-reqs
 
 FROM webdevops/php-nginx:8.2
 
