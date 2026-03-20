@@ -1,0 +1,42 @@
+services:
+  app:
+    image: webdevops/php-nginx:8.2
+    container_name: mymakan_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ${APP_PATH:-/opt/mymakan}:/app
+    env_file:
+      - ${APP_PATH:-/opt/mymakan}/.env
+    environment:
+      WEB_DOCUMENT_ROOT: /app/public
+      PHP_DISPLAY_ERRORS: 0
+      PHP_MEMORY_LIMIT: 512M
+      PHP_POST_MAX_SIZE: 64M
+      PHP_UPLOAD_MAX_FILESIZE: 64M
+    depends_on:
+      - db
+    networks:
+      - proxy
+      - mymakan_internal
+
+  db:
+    image: mysql:8.0
+    container_name: mymakan_db
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    env_file:
+      - ${APP_PATH:-/opt/mymakan}/.env
+    volumes:
+      - mymakan_db_data:/var/lib/mysql
+    networks:
+      - mymakan_internal
+
+volumes:
+  mymakan_db_data:
+
+networks:
+  proxy:
+    external: true
+  mymakan_internal:
+    driver: bridge
