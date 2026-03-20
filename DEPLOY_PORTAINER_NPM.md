@@ -137,3 +137,23 @@ proxy_connect_timeout 60s;
 - App container is not publicly exposed by port.
 - Public traffic should pass only through Nginx Proxy Manager over `proxy` network.
 - Uploaded files and runtime data persist in Docker volume `mymakan_storage`.
+
+## 9. If you still see 502
+
+Run these checks from the NPM container console:
+
+```bash
+getent hosts mymakan_app
+curl -I http://mymakan_app/
+```
+
+Expected:
+
+- `getent hosts` returns an IP (DNS/network is OK).
+- `curl -I` returns `200` or `302`.
+
+Interpretation:
+
+- If DNS fails: app stack is not attached to `proxy` network or NPM is on a different network.
+- If DNS works but curl fails to connect: app container is not running/listening yet.
+- If curl returns `500`: proxy is fine, issue is inside Laravel app (check app logs/env).

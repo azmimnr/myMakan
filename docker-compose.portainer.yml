@@ -1,7 +1,6 @@
 services:
   app:
     image: ${MYMAKAN_IMAGE:-ghcr.io/azmimnr/mymakan:latest}
-    container_name: mymakan_app
     restart: unless-stopped
     working_dir: /app
     volumes:
@@ -49,14 +48,17 @@ services:
       DATE_FORMAT: ${DATE_FORMAT:-d-m-Y}
       TIME_FORMAT: ${TIME_FORMAT:-h:i A}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
-      - proxy
-      - mymakan_internal
+      proxy:
+        aliases:
+          - mymakan_app
+          - mymakan-app
+      mymakan_internal: {}
 
   db:
     image: mysql:8.0
-    container_name: mymakan_db
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     environment:
@@ -66,6 +68,12 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - mymakan_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       - mymakan_internal
 
